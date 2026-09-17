@@ -8,10 +8,19 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const buildsRoot = path.join(root, "builds");
 const output = path.join(root, "dist");
 
+async function statIfPresent(file) {
+  try {
+    return await stat(file);
+  } catch (error) {
+    if (error.code === "ENOENT") return undefined;
+    throw error;
+  }
+}
+
 // The site shell is a first-class part of the deployable; fail loudly until it exists.
 for (const file of ["index.html", "styles.css"]) {
   const shell = path.join(root, file);
-  if (!(await stat(shell, { throwIfNoEntry: false }))?.isFile())
+  if (!(await statIfPresent(shell))?.isFile())
     throw new Error(
       `Missing site shell: ${file}. The catalog UI is not in place yet — npm test still works.`,
     );
@@ -107,10 +116,10 @@ await mkdir(output, { recursive: true });
 // Optional shell assets: self-hosted fonts, brand logo (dropped at repo root).
 const extra = [];
 const fontsDir = path.join(root, "fonts");
-if ((await stat(fontsDir, { throwIfNoEntry: false }))?.isDirectory())
+if ((await statIfPresent(fontsDir))?.isDirectory())
   extra.push(cp(fontsDir, path.join(output, "fonts"), { recursive: true }));
 if (
-  (await stat(path.join(root, "logo.svg"), { throwIfNoEntry: false }))?.isFile()
+  (await statIfPresent(path.join(root, "logo.svg")))?.isFile()
 )
   extra.push(cp(path.join(root, "logo.svg"), path.join(output, "logo.svg")));
 
