@@ -6,6 +6,7 @@ import {
   readFilters,
   writeFilters,
 } from "./catalog-data.js";
+import { initField, refreshPreviews } from "./visual-effects.js";
 
 const $ = (id) => document.getElementById(id);
 const grid = $("build-grid");
@@ -50,25 +51,11 @@ function warningSymbol() {
     '<path d="M12 3.5 22 20.5H2Z"/><path d="M12 10v4.5"/><circle cx="12" cy="17.2" r="0.3"/>';
   return svg;
 }
-function pluralRu(n, [one, few, many]) {
-  const abs = Math.abs(n) % 100;
-  const d = abs % 10;
-  if (abs > 10 && abs < 20) return many;
-  if (d > 1 && d < 5) return few;
-  if (d === 1) return one;
-  return many;
-}
 
 function makeCard(build) {
   const category = categories.find((c) => c.id === build.category);
   const article = element("article", "build-card");
   article.dataset.slug = build.slug;
-  article.style.setProperty(
-    "--build-accent",
-    /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(build.accent ?? "")
-      ? build.accent
-      : "var(--accent)",
-  );
   const link = element("a", "card-link");
   link.href = build.path;
   link.setAttribute(
@@ -120,6 +107,9 @@ function makeCard(build) {
       build.summary || build.description || "Интерактивная AI-сборка.",
     ),
   );
+  link.append(art, body);
+  article.append(link);
+  const bottom = element("div", "card-bottom");
   if (build.omp?.session) {
     const extras = element("div", "omp-extras");
     if (build.omp.logo) {
@@ -147,11 +137,8 @@ function makeCard(build) {
         : null,
     ].filter(Boolean);
     if (metrics.length) extras.append(element("span", "omp-stats", metrics.join(" · ")));
-    body.append(extras);
+    bottom.append(extras);
   }
-  link.append(art, body);
-  article.append(link);
-  const bottom = element("div", "card-bottom");
   const tags = element("div", "card-tags");
   const modelName = build.model ? normalize(build.model) : "";
   for (const tag of (build.tags ?? [])
@@ -212,13 +199,6 @@ function initializeControls() {
     $("categories").append(button);
   }
   for (const id of ["search", "model", "tag", "sort"]) $(id).disabled = false;
-  $("total-builds").textContent = builds.length;
-  $("total-models").textContent = models.length;
-  $("total-sections").textContent = categories.filter((c) =>
-    builds.some((b) => b.category === c.id),
-  ).length;
-  $("build-count").textContent =
-    `${builds.length} ${pluralRu(builds.length, ["сборка", "сборки", "сборок"])}`;
 }
 
 function syncControls() {
@@ -237,6 +217,7 @@ function render() {
       : candidates.length;
   }
   $("clear-search").hidden = !state.q;
+  $("filter-active").hidden = !(state.category || state.tag || state.sort !== "name");
   $("reset").hidden = !(
     state.q ||
     state.category ||
@@ -248,6 +229,7 @@ function render() {
     builds.length
   } сборок${state.q ? ` по запросу «${state.q}»` : ""}`;
   grid.replaceChildren();
+  refreshPreviews(grid);
   if (!visible.length) {
     const empty = element("div", "empty-state");
     empty.append(
@@ -286,25 +268,20 @@ function render() {
     title.append(
       element("span", "section-count", String(items.length).padStart(2, "0")),
     );
-    heading.append(title, element("p", "", category.description));
+    heading.append(title);
     const cards = element("div", "build-cards");
-    cards.append(
-      ...items.map((build, index) => {
-        const card = makeCard(build);
-        card.style.setProperty("--i", String(index));
-        return card;
-      }),
-    );
+    cards.append(...items.map(makeCard));
     section.append(heading, cards);
     grid.append(section);
   }
+  refreshPreviews(grid);
 }
 
 function showLoadError() {
   grid.setAttribute("aria-busy", "false");
-  $("build-count").textContent = "ОШИБКА ЗАГРУЗКИ";
   $("results-status").textContent = "Не удалось загрузить коллекцию.";
   grid.replaceChildren();
+  refreshPreviews(grid);
   const box = element("div", "empty-state");
   box.classList.add("is-error");
   box.append(
@@ -321,11 +298,10 @@ function showLoadError() {
 }
 
 async function load() {
-  const status = $("status");
-  status.classList.add("is-loading");
   grid.setAttribute("aria-busy", "true");
   $("results-status").textContent = "Загрузка коллекции…";
   grid.replaceChildren(element("div", "loading-card", "Готовим сборки…"));
+  refreshPreviews(grid);
   try {
     const response = await fetch("./builds.json", { cache: "no-store" });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -335,9 +311,7 @@ async function load() {
     syncControls();
     commit({ replace: true });
     grid.setAttribute("aria-busy", "false");
-    status.classList.replace("is-loading", "is-ok");
   } catch {
-    status.classList.replace("is-loading", "is-error");
     showLoadError();
   }
 }
@@ -414,5 +388,16 @@ window.addEventListener("keydown", (e) => {
     $("clear-search").click();
   }
 });
+document.addEventListener("click", (event) => {
+  if (!$("filter-menu").contains(event.target)) $("filter-menu").open = false;
+});
+$("filter-menu").addEventListener("keydown", (event) => {
+  if (event.key !== "Escape") return;
+  event.preventDefault();
+  $("filter-menu").open = false;
+  $("filter-menu").querySelector("summary").focus();
+});
+
+initField($("text-field"), document.body);
 
 load();

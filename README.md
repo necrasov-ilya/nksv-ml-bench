@@ -5,8 +5,14 @@ visualizations and benchmark results. Filter by category, builder model and
 tags; share filtered URLs. No npm packages, no framework — a static build on
 GitHub Pages.
 
-> Status: full stack in place. Palette and typography are committed
-> (tokens in `styles.css` `:root`); the brand logo is pending.
+The shell uses NKSV's dark portfolio palette and vector mark: a two-column
+collection beside a sticky, glyph-rendered logo. Search and filters share one
+compact pill. Real covers become ASCII previews, revealing on hover or keyboard
+focus; touch screens show the images directly. The text field reacts to the
+pointer and clicks. Reduced-motion preferences disable animation.
+
+Palette, typography and spacing live in `styles.css` `:root`; canvas effects
+live in `src/visual-effects.js`. The original mark is shipped as `logo.svg`.
 
 ## Local development
 
@@ -33,6 +39,11 @@ Pushes to `main` deploy via GitHub Pages (`.github/workflows/pages.yml`).
 Concept and architecture inspired by
 [Bench Portal](https://github.com/alesha-pro/bench-portal) by
 [Alexey](https://github.com/alesha-pro).
+
+Visual references: NKSV's portfolio Practice section and the
+[Content Architecture showcase](https://www.contentarchitecture.dev/#showcase).
+Preview glyphs are generated locally from each build's real cover; no external
+runtime or reference-site assets are required.
 
 ## License
 
