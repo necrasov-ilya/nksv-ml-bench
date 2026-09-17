@@ -1,0 +1,1 @@
+{"engines":{"node":">=22"},"name":"nksv-ml-bench","private":true,"scripts":{"build":"node scripts/build.mjs","serve":"python3 -m http.server 4176 --directory dist","test":"node --test tests/*.test.mjs"},"type":"module","version":"1.0.0"}
